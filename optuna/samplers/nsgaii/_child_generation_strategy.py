@@ -5,7 +5,10 @@ from collections.abc import Sequence
 from typing import Any
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from optuna.distributions import BaseDistribution
+from optuna.distributions import FloatDistribution
 from optuna.samplers._lazy_random_state import LazyRandomState
 from optuna.samplers.nsgaii._constraints_evaluation import _constrained_dominates
 from optuna.samplers.nsgaii._crossover import perform_crossover
@@ -54,6 +57,49 @@ class NSGAIIChildGenerationStrategy:
         self._constraints_func = constraints_func
         self._rng = rng
 
+    def _perform_mutation(self, search_space: BaseDistribution, value: float) -> Any:
+        if isinstance(search_space, FloatDistribution):
+            lb = search_space.low
+            ub = search_space.high
+
+            return self.polynomial_mutation(value, lb, ub, eta=1000)
+            # return self.gaussian_mutation(value, lb, ub, sigma=0.05)
+            # return self.uniform_mutation(value, lb, ub)
+        else:
+            raise NotImplementedError
+
+    def uniform_mutation(self, value, lb, ub) -> float:
+        child_param = np.random.rand()
+        return (ub - lb) * child_param + lb
+
+    def polynomial_mutation(self, value, lb, ub, eta) -> float:
+        u = self._rng.rng.rand()
+
+        if u <= 0.5:
+            delta_l = (2.0 * u) ** (1.0 / (eta + 1.0)) - 1.0
+            child_param = value + delta_l * (value - lb)
+        else:
+            delta_r = 1.0 - (2.0 * (1.0 - u)) ** (1.0 / (eta + 1.0))
+            child_param = value + delta_r * (ub - value)
+
+        return float(np.clip(child_param, lb, ub))
+
+    # def gaussian_mutation(self, value, lb, ub, sigma):
+    #     sigma_i = sigma * (ub - lb)
+
+    #     ui = np.random.rand()
+
+    #     uL = 0.5 * (erf((lb - value) / (np.sqrt(2) * (ub - lb) * sigma)) + 1)
+    #     uR = 0.5 * (erf((ub - value) / (np.sqrt(2) * (ub - lb) * sigma)) + 1)
+
+    #     normalized_ui = (ui - uL) / (uR - uL)  # Rescale to [0, 1]
+    #     normalized_ui = 2 * normalized_ui - 1  # Rescale to [-1, 1] for erfinv
+
+    #     child_param = value + np.sqrt(2) * sigma_i * erfinv(normalized_ui)
+    #     child_param = np.clip(child_param, lb, ub)
+
+    #     return child_param
+
     def __call__(
         self,
         study: Study,
@@ -98,4 +144,9 @@ class NSGAIIChildGenerationStrategy:
         for param_name in child_params.keys():
             if self._rng.rng.rand() >= mutation_prob:
                 params[param_name] = child_params[param_name]
+            else:
+                params[param_name] = self._perform_mutation(
+                    search_space[param_name], child_params[param_name]
+                )
+        params.update()
         return params

@@ -96,16 +96,28 @@ class SBXCrossover(BaseCrossover):
         child_params_list = []
 
         for c1_i, c2_i, x1_i, x2_i in zip(c1, c2, parents_params[0], parents_params[1]):
-            if rng.rand() < self._establishment:
-                if index_prob < self._probability:
-                    child_params_list.append(c1_i)
+            if rng.rand() < self._probability:
+                if rng.rand() < self._establishment:
+                    if index_prob < 0.5:
+                        child_params_list.append(c1_i)
+                    else:
+                        child_params_list.append(c2_i)
                 else:
-                    child_params_list.append(c2_i)
+                    if index_prob < 0.5:
+                        child_params_list.append(c2_i)
+                    else:
+                        child_params_list.append(c1_i)
             else:
-                if index_prob < self._probability:
-                    child_params_list.append(x1_i)
+                if rng.rand() < self._establishment:
+                    if index_prob < 0.5:
+                        child_params_list.append(x1_i)
+                    else:
+                        child_params_list.append(x2_i)
                 else:
-                    child_params_list.append(x2_i)
+                    if index_prob < 0.5:
+                        child_params_list.append(x2_i)
+                    else:
+                        child_params_list.append(x1_i)
         child_params = np.array(child_params_list)
 
         return child_params
