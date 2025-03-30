@@ -62,17 +62,17 @@ class NSGAIIChildGenerationStrategy:
             lb = search_space.low
             ub = search_space.high
 
-            return self.polynomial_mutation(value, lb, ub, eta=1000)
-            # return self.gaussian_mutation(value, lb, ub, sigma=0.05)
+            # return self.polynomial_mutation(value, lb, ub, eta=1000)
+            return self.gaussian_mutation(value, lb, ub, sigma_factor=1 / 500.0)
             # return self.uniform_mutation(value, lb, ub)
         else:
             raise NotImplementedError
 
-    def uniform_mutation(self, value, lb, ub) -> float:
+    def uniform_mutation(self, value: float, lb: float, ub: float) -> float:
         child_param = np.random.rand()
         return (ub - lb) * child_param + lb
 
-    def polynomial_mutation(self, value, lb, ub, eta) -> float:
+    def polynomial_mutation(self, value: float, lb: float, ub: float, eta: float) -> float:
         u = self._rng.rng.rand()
 
         if u <= 0.5:
@@ -82,23 +82,13 @@ class NSGAIIChildGenerationStrategy:
             delta_r = 1.0 - (2.0 * (1.0 - u)) ** (1.0 / (eta + 1.0))
             child_param = value + delta_r * (ub - value)
 
-        return float(np.clip(child_param, lb, ub))
+        return np.clip(child_param, lb, ub)
 
-    # def gaussian_mutation(self, value, lb, ub, sigma):
-    #     sigma_i = sigma * (ub - lb)
+    def gaussian_mutation(self, value: float, lb: float, ub: float, sigma_factor: float) -> float:
+        sigma = sigma_factor * (ub - lb)
+        child_param = np.random.normal(value, sigma)
 
-    #     ui = np.random.rand()
-
-    #     uL = 0.5 * (erf((lb - value) / (np.sqrt(2) * (ub - lb) * sigma)) + 1)
-    #     uR = 0.5 * (erf((ub - value) / (np.sqrt(2) * (ub - lb) * sigma)) + 1)
-
-    #     normalized_ui = (ui - uL) / (uR - uL)  # Rescale to [0, 1]
-    #     normalized_ui = 2 * normalized_ui - 1  # Rescale to [-1, 1] for erfinv
-
-    #     child_param = value + np.sqrt(2) * sigma_i * erfinv(normalized_ui)
-    #     child_param = np.clip(child_param, lb, ub)
-
-    #     return child_param
+        return np.clip(child_param, lb, ub)
 
     def __call__(
         self,
